@@ -26,14 +26,19 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      - name: Build and test with Maven
-        run: mvn --batch-mode --update-snapshots --no-transfer-progress clean package
+      - name: Build and test all Maven modules
+        run: mvn --batch-mode --update-snapshots --no-transfer-progress clean install
 
-      - name: Upload JAR file
+      - name: Upload JAR files for all relevant modules
         uses: actions/upload-artifact@v2
         with:
-          name: app-jar
-          path: target/*.jar
+          name: artifacts
+          path: |
+            pizza-shop-models/target/*.jar
+            pizza-shop-tracing/target/*.jar
+            pizza-shop-web-receiver/target/*.jar
+            pizza-shop-repository/target/*.jar
+            pizza-shop-transformer/target/*.jar
 
   deploy:
     needs: build
@@ -50,25 +55,24 @@ jobs:
           java-version: 17
           distribution: 'adopt'
 
-      - name: Download JAR file
+      - name: Download all artifacts
         uses: actions/download-artifact@v2
         with:
-          name: app-jar
+          name: artifacts
           path: target
 
-      - name: Build Docker image
+      - name: Build Docker image for pizza-shop-web-receiver
         run: |
-          docker build -t 320272705977.dkr.ecr.us-east-1.amazonaws.com/pizza-shop-web-receiver:${GITHUB_SHA} .
+          docker build -t 320272705977.dkr.ecr.us-east-1.amazonaws.com/pizza-shop:${{ github.sha }} -f pizza-shop-web-receiver/Dockerfile .
 
       - name: Install AWS CLI
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y awscli
+        run: sudo apt-get update && sudo apt-get install -y awscli
 
       - name: Configure AWS credentials
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
         run: |
           aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -80,15 +84,17 @@ jobs:
 
       - name: Tag and push Docker image
         run: |
-          docker tag 320272705977.dkr.ecr.us-east-1.amazonaws.com/pizza-shop-web-receiver:${GITHUB_SHA} 320272705977.dkr.ecr.us-east-1.amazonaws.com/pizza-shop-web-receiver:latest
-          docker push 320272705977.dkr.ecr.us-east-1.amazonaws.com/pizza-shop-web-receiver:${GITHUB_SHA}
-          docker push 320272705977.dkr.ecr.us-east-1.amazonaws.com/pizza-shop-web-receiver:latest
-
+          docker tag 320272705977.dkr.ecr.us-east-1.amazonaws.com/pizza-shop:${{ github.sha }} 320272705977.dkr.ecr.us-east-1.amazonaws.com/pizza-shop:latest
+          docker push 320272705977.dkr.ecr.us-east-1.amazonaws.com/pizza-shop:${{ github.sha }}
+          docker tag 320272705977.dkr.ecr.us-east-1.amazonaws.com/pizza-shop:${{ github.sha }} 320272705977.dkr.ecr.us-east-1.amazonaws.com/pizza-shop:latest
+          docker push 320272705977.dkr.ecr.us-east-1.amazonaws.com/pizza-shop:latest
       - name: Deploy to EKS
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           aws eks update-kubeconfig --region us-east-1 --name pizza-shop-eks-cluster
-          export ECR_REPOSITORY_URL="320272705977.dkr.ecr.us-east-1.amazonaws.com/pizza-shop-web-receiver:${GITHUB_SHA}"
-          envsubst < k8s-deployment.yaml > k8s/k8s-deployment.yaml
-          echo "resources:" > k8s/kustomization.yaml
-          echo "- k8s-deployment.yaml" >> k8s/kustomization.yaml
-          kubectl kustomize k8s | kubectl apply -f - --force
+          cat k8s-deployment.yml | envsubst > k8s-deployment-final.yml
+          kubectl apply -f k8s-deployment-final.yml --validate=false --v=8
