@@ -11,8 +11,7 @@ import org.springframework.context.annotation.Import;
 @AutoConfigureObservability
 @ConfigurationPropertiesScan("io.contino.pizza.shop")
 @Import({TracingConfig.class})
-public class
-TransformerApplication {
+public class TransformerApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(TransformerApplication.class, args);

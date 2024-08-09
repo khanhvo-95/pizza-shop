@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.1.0-M1</version>
+		<version>3.3.2</version>
 		<relativePath/>
 	</parent>
 	<groupId>io.contino</groupId>
@@ -97,25 +97,25 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
-			<plugin>
-				<groupId>com.google.cloud.tools</groupId>
-				<artifactId>jib-maven-plugin</artifactId>
-				<version>3.2.1</version>
-				<configuration>
-					<to>
-						<image>${project.artifactId}:latest</image>
-					</to>
-				</configuration>
-				<executions>
-					<execution>
-						<id>build-docker-container</id>
-						<phase>install</phase>
-						<goals>
-							<goal>dockerBuild</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
+<!--			<plugin>-->
+<!--				<groupId>com.google.cloud.tools</groupId>-->
+<!--				<artifactId>jib-maven-plugin</artifactId>-->
+<!--				<version>3.2.1</version>-->
+<!--				<configuration>-->
+<!--					<to>-->
+<!--						<image>${project.artifactId}:latest</image>-->
+<!--					</to>-->
+<!--				</configuration>-->
+<!--				<executions>-->
+<!--					<execution>-->
+<!--						<id>build-docker-container</id>-->
+<!--						<phase>install</phase>-->
+<!--						<goals>-->
+<!--							<goal>dockerBuild</goal>-->
+<!--						</goals>-->
+<!--					</execution>-->
+<!--				</executions>-->
+<!--			</plugin>-->
 		</plugins>
 	</build>
 	<repositories>
